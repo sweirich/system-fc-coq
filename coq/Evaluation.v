@@ -22,8 +22,8 @@ Inductive step : tm -> tm -> Prop :=
   | E_TApp : forall t1 t1' T2,
          t1 ==> t1' ->
          ttapp t1 T2 ==> ttapp t1' T2
-  | E_TAppTAbs : forall t12 T2,
-         ttapp (ttabs t12) T2 ==> [0:=T2] t12
+  | E_TAppTAbs : forall t12 T2 k,
+         ttapp (ttabs k t12) T2 ==> [0:=T2] t12
   | E_CApp : forall t1 t1' c2,
          t1 ==> t1' ->
          tcapp t1 c2 ==> tcapp t1' c2
@@ -37,21 +37,25 @@ Inductive step : tm -> tm -> Prop :=
          tcoerce (tcoerce v c1) c2 ==> tcoerce v (CTrans c1 c2)
   | E_PushApp : forall v1 t2 c U1 U2,
          uncoerced_value v1           ->
-         empty |- v1 \in TArrow U1 U2 ->
+         empty |- v1 \in tArrow U1 U2 ->
          tapp (tcoerce v1 c) t2 ==>
-              tcoerce (tapp v1 (tcoerce t2 (CSym (CNth 1 c)))) (CNth 2 c)
-  | E_PushTApp : forall v T c U,
-         uncoerced_value v      ->
-         empty |- v \in TUniv U ->
+              tcoerce (tapp v1 (tcoerce t2 (CSym (CNth 2 (CNth 1 c))))) (CNth 2 c)
+              
+  | E_PushTApp : forall v T c U k,
+         uncoerced_value v        ->
+         empty |- v \in TUniv k U ->
+         well_formed_type empty T k ->
          ttapp (tcoerce v c) T ==>
               tcoerce (ttapp v T) (CTApp c T)
-  | E_PushCApp : forall v c c0 U1 U2 U,
-         uncoerced_value v              ->
-         empty |- v \in TCoerce U1 U2 U ->
+  | E_PushCApp : forall k v c c0 U0 U1 U2 U3 U,
+         uncoerced_value v                ->
+         empty |- v \in tCoerce k U1 U2 U ->
+         well_formed_type empty U0 k      ->                        
+         empty |- c ; U0 ~~ U3            ->
          tcapp (tcoerce v c0) c ==>
-               tcoerce (tcapp v (CTrans (CTrans (CNth 1 c0) c)
-                                        (CSym (CNth 2 c0))))
-               (CNth 3 c0)
+               tcoerce (tcapp v (CTrans (CTrans (CNth 2 (CNth 1 (CNth 1 c0))) c)
+                                        (CSym (CNth 2 (CNth 1 c0)))))
+               (CNth 2 c0)
 
 where "t1 '==>' t2" := (step t1 t2).
 

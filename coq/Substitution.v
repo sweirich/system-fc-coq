@@ -1,4 +1,5 @@
 Require Export Shifting.
+Require Import Omega.
 
 (* ###################################################################### *)
 (** *** Substitution *)
@@ -7,36 +8,43 @@ Module SUBSTITUTION.
 Import SYSTEMFC.
 Import SHIFTING.
 
+
+
 Class Subst (X S T : Type) := {
   do_subst : X -> S -> T -> T
 }.
 Notation "'[' x ':=' s ']' t" := (do_subst x s t) (at level 20).
 
-Fixpoint subst_coercion_fix (x:nat) (d:cn) (c:cn) : cn :=
+
+
+Fixpoint subst_coer_fix (x:nat) (d:cn) (c:cn) : cn :=
   match c with
     | CVar y => 
       if eq_nat_dec x y then d
       else if le_lt_dec x y then CVar (y-1)
            else CVar y
     | CRefl T      => CRefl T
-    | CSym c       => CSym (subst_coercion_fix x d c)
-    | CTrans c1 c2 => CTrans (subst_coercion_fix x d c1) (subst_coercion_fix x d c2)
-    | CArrow c1 c2   => CArrow (subst_coercion_fix x d c1) (subst_coercion_fix x d c2)
-    | CTCoerce c1 c2 c3 => CTCoerce (subst_coercion_fix x d c1)
-                                    (subst_coercion_fix x d c2)
-                                    (subst_coercion_fix x d c3)
-    | CNth n c     => CNth n (subst_coercion_fix x d c)
-    | CTAbs c      => CTAbs (subst_coercion_fix x (cshift_typ 0 d) c)
-    | CTApp c T    => CTApp (subst_coercion_fix x d c) T
+    | CSym c       => CSym (subst_coer_fix x d c)
+    | CTrans c1 c2 => CTrans (subst_coer_fix x d c1) (subst_coer_fix x d c2)
+    | CApp c1 c2   => CApp (subst_coer_fix x d c1) (subst_coer_fix x d c2)
+(*    | CTCoerce c1 c2 c3 => CTCoerce (subst_coer_fix x d c1)
+                                    (subst_coer_fix x d c2)
+                                    (subst_coer_fix x d c3) *)
+    | CNth n c     => CNth n (subst_coer_fix x d c)
+    | CTAbs k c    => CTAbs k (subst_coer_fix x (cshift_typ 0 d) c)
+    | CTApp c T    => CTApp (subst_coer_fix x d c) T
   end.
 
 Instance subst_cn : Subst nat cn cn := {
-  do_subst := subst_coercion_fix
+  do_subst := subst_coer_fix
 }.
 
+
 Inductive subst_coercion : cn -> nat -> cn -> cn -> Prop :=
+                                                     
   | sc_var_here : forall d x,
-      subst_coercion d x (CVar x) d
+    subst_coercion d x (CVar x) d
+
   | sc_var_lt : forall d x x',
       x < x' ->
       subst_coercion d x (CVar x') (CVar (x' - 1))
@@ -52,26 +60,22 @@ Inductive subst_coercion : cn -> nat -> cn -> cn -> Prop :=
       subst_coercion d x c1 c1' ->
       subst_coercion d x c2 c2' ->
       subst_coercion d x (CTrans c1 c2) (CTrans c1' c2')
-  | sc_carrow : forall d x c1 c1' c2 c2',
+  | sc_cpp : forall d x c1 c1' c2 c2',
       subst_coercion d x c1 c1' ->
       subst_coercion d x c2 c2' ->
-      subst_coercion d x (CArrow c1 c2) (CArrow c1' c2')
-  | sc_ctcoerce : forall d x c1 c1' c2 c2' c3 c3',
-      subst_coercion d x c1 c1' ->
-      subst_coercion d x c2 c2' ->
-      subst_coercion d x c3 c3' ->
-      subst_coercion d x (CTCoerce c1 c2 c3) (CTCoerce c1' c2' c3')
+      subst_coercion d x (CApp c1 c2) (CApp c1' c2')
   | sc_nth : forall d x n c c',
       subst_coercion d x c c' ->
       subst_coercion d x (CNth n c) (CNth n c')
-  | sc_tabs : forall d x c c',
+  | sc_tabs : forall d x c c' k,
       subst_coercion (cshift_typ 0 d) x c c' ->
-      subst_coercion d x (CTAbs c) (CTAbs c')
+      subst_coercion d x (CTAbs k c) (CTAbs k c')
   | sc_tapp : forall d x c c' T,
       subst_coercion d x c c' ->
       subst_coercion d x (CTApp c T) (CTApp c' T).
 
 Hint Constructors subst_coercion.
+
 
  
 Lemma subst_coercion_correct : forall d x c c',
@@ -95,15 +99,16 @@ Proof.
       rewrite <- H. constructor.
       apply IHc1. trivial.
       apply IHc2. trivial.
-    SCase "c = CArrow c1 c2".
+    SCase "c = CApp c1 c2".
       rewrite <- H. constructor.
       apply IHc1. trivial.
       apply IHc2. trivial.
+      (*
     SCase "c = CTCoerce c1 c2 c3".
       rewrite <- H. constructor.
       apply IHc1. trivial.
       apply IHc2. trivial.
-      apply IHc3. trivial.
+      apply IHc3. trivial. *)
   Case "<-".
     intro H. induction H; simpl;
     subst; try reflexivity; try assumption.
@@ -125,8 +130,8 @@ Fixpoint subst_term_fix (x:nat) (s:tm) (t:tm) : tm :=
       tabs T (subst_term_fix (S x) (shift 0 s) t1) 
   | tapp t1 t2 => 
       tapp (subst_term_fix x s t1) (subst_term_fix x s t2)
-  | ttabs t =>
-      ttabs (subst_term_fix x (shift_typ 0 s) t)
+  | ttabs k t =>
+      ttabs k (subst_term_fix x (shift_typ 0 s) t)
   | ttapp t T =>
       ttapp (subst_term_fix x s t) T
   | tcabs T1 T2 t =>
@@ -158,9 +163,9 @@ Inductive subst_term : tm -> nat -> tm -> tm -> Prop :=
       subst_term s x t1 t1' ->
       subst_term s x t2 t2' ->
       subst_term s x (tapp t1 t2) (tapp t1' t2')
-  | s_ttabs : forall s x t t',
+  | s_ttabs : forall s x t t' k,
       subst_term (shift_typ 0 s) x t t' ->
-      subst_term s x (ttabs t) (ttabs t')
+      subst_term s x (ttabs k t) (ttabs k t')
   | s_ttapp : forall s x t t' T,
       subst_term s x t t' ->
       subst_term s x (ttapp t T) (ttapp t' T)
@@ -218,13 +223,14 @@ Fixpoint subst_type_in_type_fix (I:nat) (P:ty) (T:ty) : ty :=
   | TVar N =>
       if eq_nat_dec I N then P
       else if le_lt_dec I N then TVar (N-1)
-           else TVar N
-  | TArrow T1 T2 =>
-      TArrow (subst_type_in_type_fix I P T1) (subst_type_in_type_fix I P T2)
-  | TUniv T   => TUniv (subst_type_in_type_fix (I + 1) (tshift 0 P) T)
-  | TCoerce T1 T2 U =>
+        else TVar N
+  | TCon N => TCon N
+  | TApp T1 T2 =>
+      TApp (subst_type_in_type_fix I P T1) (subst_type_in_type_fix I P T2)
+  | TUniv k T   => TUniv k (subst_type_in_type_fix (I + 1) (tshift 0 P) T)
+(*  | TCoerce T1 T2 U =>
     TCoerce (subst_type_in_type_fix I P T1) (subst_type_in_type_fix I P T2)
-            (subst_type_in_type_fix I P U)
+            (subst_type_in_type_fix I P U) *)
   end.
 
 Instance subst_ty_ty : Subst nat ty ty := {
@@ -234,29 +240,33 @@ Instance subst_ty_ty : Subst nat ty ty := {
 
 Inductive subst_type_in_type (T:ty) (I:nat) : ty -> ty -> Prop :=
   | s_var_eq :
-      subst_type_in_type T I (TVar I) T
+    subst_type_in_type T I (TVar I) T
   | s_var_lt : forall N,
       N < I ->
       subst_type_in_type T I (TVar N) (TVar N)
   | s_var_gt : forall N,
       N > I ->
       subst_type_in_type T I (TVar N) (TVar (N-1))
-  | s_arrow : forall T1 T2 T1' T2',
+  | s_con : forall N,
+      subst_type_in_type T I (TCon N) (TCon N)
+  | s_app : forall T1 T2 T1' T2',
       subst_type_in_type T I T1 T1' ->
       subst_type_in_type T I T2 T2' ->
-      subst_type_in_type T I (TArrow T1 T2) (TArrow T1' T2')
-  | s_univ : forall T1 T2,
+      subst_type_in_type T I (TApp T1 T2) (TApp T1' T2')
+  | s_univ : forall T1 T2 k,
       subst_type_in_type (tshift 0 T) (I+1) T1 T2 ->
-      subst_type_in_type T I (TUniv T1) (TUniv T2)
-  | s_coerce : forall U U1 U2 V V1 V2,
+      subst_type_in_type T I (TUniv k T1) (TUniv k T2)
+(*  | s_coerce : forall U U1 U2 V V1 V2,
       subst_type_in_type T I U1 V1 ->
       subst_type_in_type T I U2 V2 ->
       subst_type_in_type T I U  V  ->
-      subst_type_in_type T I (TCoerce U1 U2 U) (TCoerce V1 V2 V).
+      subst_type_in_type T I (TCoerce U1 U2 U) (TCoerce V1 V2 V) *)
+      .
 
 Lemma subst_type_in_type_correct : forall N P T1 T2,
   [N:=P]T1 = T2 <-> subst_type_in_type P N T1 T2.
 Proof.
+
   intros. split.
   Case "->".
     generalize dependent N; generalize dependent P;
@@ -273,16 +283,18 @@ Proof.
           apply le_lt_or_eq in l. inversion l; subst.
           assumption. apply ex_falso_quodlibet; apply n0; reflexivity.
         SSSCase "N > n".
-          apply s_var_lt. assumption.
-    SCase "T1 = TArrow T11 T12".
+        apply s_var_lt. assumption.
+    SCase "T1 = TCon X".
+        subst. constructor.
+    SCase "T1 = TApp T11 T12".
       rewrite <- H. constructor.
       apply IHT1_1. reflexivity.
       apply IHT1_2. reflexivity.
     SCase "T2 = TUniv T".
       rewrite <- H. constructor. apply IHT1. reflexivity.
-    SCase "T2 = TCoerce T".
+(*    SCase "T2 = TCoerce T".
       rewrite <- H. constructor. apply IHT1_1. trivial.
-      apply IHT1_2; trivial. apply IHT1_3; trivial.
+      apply IHT1_2; trivial. apply IHT1_3; trivial. *)
 Case "<-".
     intro H. induction H; simpl;
     subst; try reflexivity; try assumption.
@@ -297,6 +309,7 @@ Case "<-".
     apply ex_falso_quodlibet. eapply lt_asym. apply H. trivial.
 Qed.
 
+
 (* Type in Coercion Substitution *)
 
 Fixpoint subst_ty_in_cn_fix (X:nat) (U:ty) (c:cn) : cn :=
@@ -306,13 +319,14 @@ Fixpoint subst_ty_in_cn_fix (X:nat) (U:ty) (c:cn) : cn :=
     | CSym c       => CSym (subst_ty_in_cn_fix X U c)
     | CTrans c1 c2 => CTrans (subst_ty_in_cn_fix X U c1)
                              (subst_ty_in_cn_fix X U c2)
-    | CArrow c1 c2 => CArrow (subst_ty_in_cn_fix X U c1)
-                             (subst_ty_in_cn_fix X U c2)
+    | CApp c1 c2 => CApp (subst_ty_in_cn_fix X U c1)
+      (subst_ty_in_cn_fix X U c2)
+(*      
     | CTCoerce c1 c2 c3 => CTCoerce (subst_ty_in_cn_fix X U c1)
                                     (subst_ty_in_cn_fix X U c2)
-                                    (subst_ty_in_cn_fix X U c3)
+                                    (subst_ty_in_cn_fix X U c3) *)
     | CNth n c     => CNth n (subst_ty_in_cn_fix X U c)
-    | CTAbs c      => CTAbs (subst_ty_in_cn_fix (S X) (tshift 0 U) c)
+    | CTAbs k c      => CTAbs k (subst_ty_in_cn_fix (S X) (tshift 0 U) c)
     | CTApp c T    => CTApp (subst_ty_in_cn_fix X U c) ([X := U] T)
   end.
 
@@ -333,21 +347,22 @@ Inductive subst_ty_in_cn (T:ty) (X:nat) : cn -> cn -> Prop :=
       subst_ty_in_cn T X c1 c1' ->
       subst_ty_in_cn T X c2 c2' ->
       subst_ty_in_cn T X (CTrans c1 c2) (CTrans c1' c2')
-  | stc_carrow : forall c1 c1' c2 c2',
+  | stc_caapp : forall c1 c1' c2 c2',
       subst_ty_in_cn T X c1 c1' ->
       subst_ty_in_cn T X c2 c2' ->
-      subst_ty_in_cn T X (CArrow c1 c2) (CArrow c1' c2')
+      subst_ty_in_cn T X (CApp c1 c2) (CApp c1' c2')
+(*      
   | stc_ctcoerce : forall c1 c1' c2 c2' c3 c3',
       subst_ty_in_cn T X c1 c1' ->
       subst_ty_in_cn T X c2 c2' ->
       subst_ty_in_cn T X c3 c3' ->
-      subst_ty_in_cn T X (CTCoerce c1 c2 c3) (CTCoerce c1' c2' c3')
+      subst_ty_in_cn T X (CTCoerce c1 c2 c3) (CTCoerce c1' c2' c3') *)
   | stc_nth : forall c c' n,
       subst_ty_in_cn T X c c' ->
       subst_ty_in_cn T X (CNth n c) (CNth n c')
-  | stc_tabs : forall c c',
+  | stc_tabs : forall c c' k,
       subst_ty_in_cn (tshift 0 T) (S X) c c' ->
-      subst_ty_in_cn T X (CTAbs c) (CTAbs c')
+      subst_ty_in_cn T X (CTAbs k c) (CTAbs k c')
   | stc_tapp : forall c c' U V,
       subst_ty_in_cn T X c c'    ->
       subst_type_in_type T X U V ->
@@ -376,6 +391,7 @@ Proof.
     try (apply subst_type_in_type_correct in H0; subst; trivial).
 Qed.
 
+
 (* Type in Term Substitution *)
 
 Fixpoint subst_type_fix (X:nat) (T:ty) (t:tm) : tm :=
@@ -386,8 +402,8 @@ Fixpoint subst_type_fix (X:nat) (T:ty) (t:tm) : tm :=
       tabs ([X := T] T') (subst_type_fix X T t1) 
   | tapp t1 t2 => 
       tapp (subst_type_fix X T t1) (subst_type_fix X T t2)
-  | ttabs t1 =>
-      ttabs (subst_type_fix (X+1) (tshift 0 T) t1) 
+  | ttabs k t1 =>
+      ttabs k (subst_type_fix (X+1) (tshift 0 T) t1) 
   | ttapp t' T' =>
       ttapp (subst_type_fix X T t') ([X := T] T')
   | tcabs T1 T2 t1 =>
@@ -413,9 +429,9 @@ Inductive subst_type (P:ty) (I:nat) : tm -> tm -> Prop :=
       subst_type P I t1 t1' ->
       subst_type P I t2 t2' ->
       subst_type P I (tapp t1 t2) (tapp t1' t2')
-  | st_ttabs : forall t t',
+  | st_ttabs : forall t t' k,
       subst_type (tshift 0 P) (I+1) t t' ->
-      subst_type P I (ttabs t) (ttabs t')
+      subst_type P I (ttabs k t) (ttabs k t')
   | st_ttapp : forall t t' T1 T2,
       subst_type P I t t' ->
       subst_type_in_type P I T1 T2 ->
@@ -439,6 +455,7 @@ Hint Constructors subst_type.
 Theorem subst_type_correct : forall P I t t',
   [I := P] t = t' <-> subst_type P I t t'.
 Proof.
+
   intros. split.
   Case "->".
     generalize dependent I. generalize dependent P.
@@ -479,6 +496,7 @@ Proof.
     apply subst_type_in_type_correct in H1. subst. trivial.
 Qed.
 
+
 (** [] *)
 
 
@@ -492,8 +510,8 @@ Fixpoint subst_cn_in_tm_fix (x:nat) (c:cn) (t:tm) : tm :=
       tabs T (subst_cn_in_tm_fix x c t1) 
   | tapp t1 t2 => 
       tapp (subst_cn_in_tm_fix x c t1) (subst_cn_in_tm_fix x c t2)
-  | ttabs t1 =>
-      ttabs (subst_cn_in_tm_fix x (cshift_typ 0 c) t1) 
+  | ttabs k t1 =>
+      ttabs k (subst_cn_in_tm_fix x (cshift_typ 0 c) t1) 
   | ttapp t' T' =>
       ttapp (subst_cn_in_tm_fix x c t') T'
   | tcabs T1 T2 t1 =>
@@ -518,9 +536,9 @@ Inductive subst_cn_in_tm (c:cn) (x:nat) : tm -> tm -> Prop :=
       subst_cn_in_tm c x t1 t1' ->
       subst_cn_in_tm c x t2 t2' ->
       subst_cn_in_tm c x (tapp t1 t2) (tapp t1' t2')
-  | sct_ttabs : forall t t',
+  | sct_ttabs : forall t t' k,
       subst_cn_in_tm (cshift_typ 0 c) x t t' ->
-      subst_cn_in_tm c x (ttabs t) (ttabs t')
+      subst_cn_in_tm c x (ttabs k t) (ttabs k t')
   | sct_ttapp : forall t t' T,
       subst_cn_in_tm c x t t' ->
       subst_cn_in_tm c x (ttapp t T) (ttapp t' T)
@@ -564,5 +582,193 @@ Proof.
          unfold do_subst in H0; unfold subst_cn in H0;
          rewrite -> H0; reflexivity).
 Qed.
+
+(* ####################################################### *)  
+(* ** (Type variable) Shifting and substitution properties *)
+
+
+(* The next two tactics come from the POPL paper *)
+ Ltac tvar_case :=
+   unfold tshift; unfold do_subst; fold tshift; fold do_subst;
+   match goal with
+   | |- ?x =>
+       match x with
+       | context [le_gt_dec ?n ?n'] =>
+           case (le_gt_dec n n')
+       | context C [(lt_eq_lt_dec ?n ?n')] =>
+           case (lt_eq_lt_dec n n'); [intro s; case s; clear s | idtac ]
+       end
+   end.
+
+ Ltac common_cases n T :=
+   simpl; generalize n; clear n; induction T; intros n''; intros;
+     [ repeat tvar_case;
+       simpl; trivial; try (intros; apply f_equal with (f := tvar); omega);
+       try (intros; assert False; [ omega | contradiction ])
+     | simpl; trivial
+     | simpl; try (apply f_equal2 with (f := TApp); trivial)
+     | simpl ].
+
+ Lemma subst_shift_same : forall X T U,
+   T = [X := U] (tshift X T).
+ Proof.
+   intros. generalize dependent X. generalize dependent U.
+   induction T; intros.
+     simpl. destruct (le_gt_dec X n).
+       destruct (eq_nat_dec X (S n)).
+         omega.
+       destruct (le_lt_dec X (S n)). assert (n = S n - 1) by omega. auto.
+         omega.
+       destruct (eq_nat_dec X n).
+         omega.
+         destruct (le_lt_dec X n). omega. trivial.
+     simpl. trivial.
+     simpl. simpl in IHT1. rewrite <- IHT1. simpl in IHT2; rewrite <- IHT2. trivial.
+     simpl. simpl in IHT. assert (S X = X + 1) by omega. rewrite H.
+       rewrite <- IHT. trivial.
+ Qed.
+
+ Lemma tshift_tshift_prop : forall X Y T,
+   tshift X (tshift (X + Y) T) = tshift (1 + X + Y) (tshift X T).
+ Proof.
+   intros. common_cases X T.
+   rewrite IHT.  trivial. 
+ Qed.
+
+Lemma tshift_subst_prop_2 : forall n n' T T',
+  (tshift (n + n') ([n := T'] T)) =
+  ([n := (tshift (n + n') T')] (tshift (1 + n + n') T)).
+Proof.
+  intros. generalize dependent T'. common_cases n T. intros.
+  destruct (eq_nat_dec n'' n). omega.
+    destruct (le_lt_dec n'' n).
+      destruct (eq_nat_dec n'' (S n)).
+        omega.
+        destruct (le_lt_dec n'' (S n)).
+          simpl. destruct (le_gt_dec (n'' + n') (n - 1)).
+          assert (S (n - 1) = n - 0) by omega. rewrite H. trivial.
+          omega.
+        omega.
+      omega.
+    intros.
+    destruct (eq_nat_dec n'' n).
+      trivial.
+      destruct (le_lt_dec n'' n).
+        simpl. destruct (le_gt_dec (n'' + n') (n - 1)).
+          omega.
+          trivial.
+        simpl.
+      destruct (le_gt_dec (n'' + n') n).
+        omega.
+        trivial.
+    apply f_equal. assert (n'' + n' = 0 + (n'' + n')) by trivial.
+    rewrite H. rewrite tshift_tshift_prop. simpl.
+    assert (S (n'' + n') = (n'' + 1) + n') by omega.
+    rewrite H0. apply IHT.
+Qed.
+
+
+ Lemma tshift_subst_prop : forall X Y T U,
+   tshift X ([X + Y := U] T) =
+   [S (X + Y) := tshift X U] (tshift X T).
+ Proof.
+   intros. generalize dependent U. common_cases X T. intros.
+   simpl. destruct (eq_nat_dec (n'' + Y) n). trivial.
+   destruct (le_lt_dec (n'' + Y) n). simpl.
+   destruct (le_gt_dec n'' (n - 1)). assert (S (n - 1) = n - 0) by omega.
+     rewrite H. trivial. omega. 
+     simpl. destruct (le_gt_dec n'' n). trivial. omega.
+   intros. destruct (eq_nat_dec (n'' + Y) n). omega.
+     destruct (le_lt_dec (n'' + Y) n). omega.
+     simpl. destruct (le_gt_dec n'' n). omega.
+     destruct
+       (match n as n1 return ({S (n'' + Y) = n1} + {S (n'' + Y) <> n1}) with
+          | 0 => right (not_eq_sym (O_S (n'' + Y)))                           
+          | S m =>                                                     
+            sumbool_rec                                                     
+              (fun _ : {n'' + Y = m} + {n'' + Y <> m} =>                    
+                 {S (n'' + Y) = S m} + {S (n'' + Y) <> S m})                  
+              (fun a : n'' + Y = m => left (f_equal S a))                   
+              (fun b : n'' + Y <> m => right (not_eq_S (n'' + Y) m b))      
+              (eq_nat_dec (n'' + Y) m)                                      
+        end). omega. 
+     destruct (le_gt_dec (S (n'' + Y)) n). omega.
+     destruct n. trivial. simpl. unfold sumbool_rec. unfold sumbool_rect.
+     destruct (le_lt_dec (n'' + Y) n). omega. 
+     destruct (Nat.eq_dec (n'' + Y) n). omega. trivial.
+     apply f_equal. 
+     assert (n'' + Y + 1 = S n'' + Y) by omega. rewrite H.
+     assert (tshift 0 (tshift (0 + n'') U) = tshift (1 + 0 + n'') (tshift 0 U))
+       by (apply tshift_tshift_prop).
+     simpl in H0. rewrite H0. 
+     rewrite IHT. trivial. 
+ Qed.
+
+ Lemma tsubst_tsubst_prop : forall X Y (T U V : ty),
+   [X + Y := V] ([X := U] T) =
+   [X := [X + Y := V] U] ([1 + X + Y := tshift X V] T).
+ Proof.
+   intros X Y T. common_cases X T.
+
+   destruct (eq_nat_dec n'' n). 
+   destruct n. simpl. destruct (eq_nat_dec n'' 0).
+   trivial. omega.
+   unfold sumbool_rec. unfold sumbool_rect.
+   destruct (eq_nat_dec (n'' + Y) n). omega.
+   destruct (le_lt_dec (n'' + Y) n). omega. simpl.
+   destruct (eq_nat_dec n'' (S n)).
+   trivial. omega.
+   destruct (le_lt_dec n'' n). simpl.
+   destruct (eq_nat_dec (n'' + Y) (n - 1)). destruct n.
+   omega. unfold sumbool_rec. unfold sumbool_rect.
+   destruct (eq_nat_dec (n'' + Y) n). subst.
+   apply subst_shift_same. simpl. omega.
+   destruct (le_lt_dec (n'' + Y) (n - 1)).
+   unfold sumbool_rec. unfold sumbool_rect. destruct n. simpl.
+   omega. simpl. destruct (eq_nat_dec (n'' + Y) n). omega.
+   simpl. destruct (le_lt_dec (n'' + Y) n). simpl.
+   destruct (eq_nat_dec n'' (n - 0) ). omega. simpl.
+   destruct (le_lt_dec n'' (n - 0)). trivial. omega. omega.
+   destruct (match n as n2 return ({S (n'' + Y) = n2} + {S (n'' + Y) <> n2}) with
+               | 0 => right (not_eq_sym (O_S (n'' + Y)))
+               | S m =>
+                 sumbool_rec
+                   (fun _ : {n'' + Y = m} + {n'' + Y <> m} =>
+                      {S (n'' + Y) = S m} + {S (n'' + Y) <> S m})
+                   (fun a : n'' + Y = m => left (f_equal S a))
+                   (fun b : n'' + Y <> m => right (not_eq_S (n'' + Y) m b))
+                   (eq_nat_dec (n'' + Y) m)
+             end).
+   omega. unfold sumbool_rec. unfold sumbool_rect. destruct n. omega.
+   destruct (le_lt_dec (n'' + Y) n). omega. simpl.
+   destruct (eq_nat_dec n'' (S n)). omega.
+   destruct (eq_nat_dec (n'' + Y) n). omega. simpl.
+   destruct (eq_nat_dec n'' (S n)). omega.
+   destruct (le_lt_dec n'' (S n)). trivial. omega.
+
+   simpl. 
+   destruct (eq_nat_dec (n'' + Y) n). unfold sumbool_rec. unfold sumbool_rect.
+   destruct n. simpl. destruct (eq_nat_dec n'' 0). omega.
+   destruct (le_lt_dec n'' 0). omega. omega. simpl. omega.
+   destruct (le_lt_dec (n'' + Y) n). omega.
+   unfold sumbool_rec. unfold sumbool_rect. destruct n. simpl.
+   destruct (eq_nat_dec n'' 0). omega.
+   destruct (le_lt_dec n'' 0). trivial. trivial. 
+   destruct (eq_nat_dec (n'' + Y) n). omega.
+   destruct (le_lt_dec (n'' + Y) n). omega. simpl.
+   destruct (eq_nat_dec n'' (S n)). omega.
+   destruct (le_lt_dec n'' (S n)). omega. trivial.
+
+   assert (n'' + Y = 0 + (n'' + Y)) by trivial. rewrite H. clear H. 
+   rewrite tshift_subst_prop. simpl.
+   assert (n'' = 0 + n'') by trivial. rewrite H. clear H.
+   rewrite tshift_tshift_prop. simpl. 
+   assert (n'' + Y + 1 = n'' + 1 + Y) by omega. rewrite H. clear H.
+   rewrite IHT.
+   assert (n'' + 1 = S n'') by omega. rewrite H. clear H.
+   trivial.
+Qed.
+
+
 
 End SUBSTITUTION.
