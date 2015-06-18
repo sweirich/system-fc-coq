@@ -9,12 +9,10 @@ Import SYSTEMFC.
 Import SHIFTING.
 
 
-
 Class Subst (X S T : Type) := {
   do_subst : X -> S -> T -> T
 }.
 Notation "'[' x ':=' s ']' t" := (do_subst x s t) (at level 20).
-
 
 
 Fixpoint subst_coer_fix (x:nat) (d:cn) (c:cn) : cn :=
@@ -27,9 +25,6 @@ Fixpoint subst_coer_fix (x:nat) (d:cn) (c:cn) : cn :=
     | CSym c       => CSym (subst_coer_fix x d c)
     | CTrans c1 c2 => CTrans (subst_coer_fix x d c1) (subst_coer_fix x d c2)
     | CApp c1 c2   => CApp (subst_coer_fix x d c1) (subst_coer_fix x d c2)
-(*    | CTCoerce c1 c2 c3 => CTCoerce (subst_coer_fix x d c1)
-                                    (subst_coer_fix x d c2)
-                                    (subst_coer_fix x d c3) *)
     | CNth n c     => CNth n (subst_coer_fix x d c)
     | CTAbs k c    => CTAbs k (subst_coer_fix x (cshift_typ 0 d) c)
     | CTApp c T    => CTApp (subst_coer_fix x d c) T
@@ -43,8 +38,8 @@ Instance subst_cn : Subst nat cn cn := {
 Inductive subst_coercion : cn -> nat -> cn -> cn -> Prop :=
                                                      
   | sc_var_here : forall d x,
-    subst_coercion d x (CVar x) d
-
+      subst_coercion d x (CVar x) d
+                                   
   | sc_var_lt : forall d x x',
       x < x' ->
       subst_coercion d x (CVar x') (CVar (x' - 1))
@@ -351,12 +346,6 @@ Inductive subst_ty_in_cn (T:ty) (X:nat) : cn -> cn -> Prop :=
       subst_ty_in_cn T X c1 c1' ->
       subst_ty_in_cn T X c2 c2' ->
       subst_ty_in_cn T X (CApp c1 c2) (CApp c1' c2')
-(*      
-  | stc_ctcoerce : forall c1 c1' c2 c2' c3 c3',
-      subst_ty_in_cn T X c1 c1' ->
-      subst_ty_in_cn T X c2 c2' ->
-      subst_ty_in_cn T X c3 c3' ->
-      subst_ty_in_cn T X (CTCoerce c1 c2 c3) (CTCoerce c1' c2' c3') *)
   | stc_nth : forall c c' n,
       subst_ty_in_cn T X c c' ->
       subst_ty_in_cn T X (CNth n c) (CNth n c')

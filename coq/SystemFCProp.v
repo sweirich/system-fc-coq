@@ -14,7 +14,7 @@ Import WEAKENING.
 Import SUBSTPROP.
 
 (* ###################################################################### *)
-(** * Inversion lemmas *)
+(** * Inversion lemmas for the kinding relation. *)
 
 Lemma arrow_kind_inv1 : forall Gamma t1 t2 k,
                           well_formed_type Gamma (tArrow t1 t2) k ->
@@ -42,6 +42,142 @@ Proof.
   inversion H. inversion H2. inversion H7. rewrite arrKind in H11.
   inversion H11. subst. trivial.
 Qed.
+
+Fixpoint arg_kinds ks k :=
+  match ks with
+    | nil => k
+    | k0 :: ks0 => KArrow k0 (arg_kinds ks0 k)
+  end.
+
+
+Inductive result_kind : kind -> kind -> Prop :=
+| result_here : forall k k1, result_kind k (KArrow k1 k)
+| result_next : forall k k1 k', result_kind k k' -> result_kind k (KArrow k1 k').
+
+Fixpoint is_result (k : kind) (k2 : kind) : Prop :=
+  match k2 with
+    | KStar => False
+    | KArrow k0 k1 => k = k1 \/ is_result k k1
+  end.
+
+Lemma result_kind_antireflexive : forall k, ~(result_kind k k).
+  unfold not. intro. induction k. intros. inversion H.
+  intros.
+Admitted.
+
+Lemma kinds_oc : forall k k0, ~(k = KArrow k0 k).
+  unfold not.
+  intros. induction k. inversion H.
+  inversion H. apply IHk2. auto.
+Qed.
+
+Lemma arg_kinds_oc : forall ks k1 k, k = KArrow k1 (arg_kinds ks k) -> False.
+  induction k. intros. inversion H.
+  intro H1. inversion H1.
+Admitted.
+(*
+  destruct ks. simpl in H. inversion H. simpl in H.
+
+  unfold not. simpl. inversion H.  inversion H. apply kinds_oc.
+  unfold not in *. intros. simpl in H.
+  destruct k. inversion H. inversion H.
+  intros. unfold not. intros. inversion H.
+  unfold not. intros. inversion H.
+  destruct ks. simpl in H2. eapply kinds_oc. eauto.
+  unfold not in IHk2. simpl in H2.
+  apply IHk2 with (k0 := k) (ks := (k0 :: ks)). simpl. 
+ *)
+
+Lemma arg_kinds_inj1 : forall ks ks' k,
+                         arg_kinds ks k = arg_kinds ks' k -> ks = ks'.
+Proof.
+  induction ks; intros. destruct ks'. trivial.
+  simpl in H. inversion H. apply arg_kinds_oc in H. inversion H.
+  destruct ks'. simpl in H. assert (k = (KArrow a (arg_kinds ks k))). auto.
+    apply arg_kinds_oc in H0. inversion H0.
+  simpl in H. inversion H. f_equal. apply IHks with k. trivial.
+Qed.
+
+Lemma tcon_app : forall ts t tc, exists u, exists v, tcon_aux tc (t :: ts) = TApp u v.
+  intro ts. induction ts.
+  intros. unfold tcon. simpl. exists tc. exists t. auto.
+  intros t tc. simpl in IHts. simpl. apply IHts.  
+Qed.
+
+Inductive spine_similar : ty -> ty -> Prop :=
+| similar_heads : forall tc1 tc2, spine_similar (TCon tc1) (TCon tc2)
+| similar_apps  : forall t1 t2 u1 u2, spine_similar t1 t2 -> spine_similar (TApp t1 u1) (TApp t2 u2).                                          
+
+Lemma tcon_injective : forall ts1 ts2 tc1 tc2, tcon tc1 ts1 = tcon tc2 ts2 -> tc1 = tc2 /\ ts1 = ts2.
+Admitted.
+(*
+  intros ts1.  induction ts1. induction ts2.
+  - simpl.  intros. auto.
+  - intros. inversion H. subst. 
+    destruct tcon_app with (tc := (TCon tc3)) (t := a) (ts := ts2) as [U [V EQ]].
+    rewrite EQ in H0. simpl in H0. inversion H0.
+    simpl in H0. simpl in IHts2.
+  intros. destruct ts2. destruct tcon_app with (tc := (TCon tc1)) (t := a) (ts := ts1) as [U [V EQ]]. unfold tcon in H. simpl in *.
+  rewrite EQ in H. inversion H.
+  - unfold tcon in H. simpl in H. 
+*)  
+
+Inductive well_formed_types Gamma : list ty -> list kind -> Prop :=
+| wfts_nil : well_formed_types Gamma nil nil
+| wfts_cons : forall t ts k ks, well_formed_type Gamma t k ->
+                                well_formed_types Gamma ts ks ->
+                                well_formed_types Gamma (t :: ts) (k :: ks).
+
+Lemma tcon_types : forall Gamma ts ks t k,
+  well_formed_type Gamma t (arg_kinds ks k) ->                    
+  well_formed_types Gamma ts ks ->
+  well_formed_type Gamma (tcon_aux t ts) k.
+Proof.
+  induction ts. intros.
+  - destruct ks.
+    simpl. simpl in H. trivial.
+    simpl. inversion H0.
+  - intros. destruct ks.
+    inversion H0.
+    inversion H0. subst.
+    simpl. eapply IHts. econstructor. eauto. trivial. trivial.
+Qed.
+
+Lemma tcon_types_inv : forall Gamma ts t k,
+  well_formed_type Gamma (tcon_aux t ts) k ->                         
+  exists ks, well_formed_types Gamma ts ks /\ well_formed_type Gamma t (arg_kinds ks k).
+Proof.
+  induction ts; intros.
+  - simpl in H. exists []. split. constructor. simpl. trivial.
+  - simpl in H. destruct (IHts (TApp t a) k H) as [ks [HKS HT]].
+    inversion HT.
+    exists (k' :: ks). 
+    split. constructor; trivial. simpl. trivial.
+Qed.
+                     
+
+Lemma tcon_ind : forall Gamma ts tc ks,
+   Sigma tc = Some (arg_kinds ks KStar) ->
+   well_formed_type Gamma (tcon tc ts) KStar ->
+   well_formed_types Gamma ts ks.
+Proof.
+  intros G ts tc ks EQ H.
+  unfold tcon in H. destruct (tcon_types_inv G ts (TCon tc) KStar H) as [ks' [WFKS WFT]].
+  inversion WFT. subst. rewrite EQ in H1. inversion H1.
+  apply arg_kinds_inj1 in H2. subst. trivial.
+Qed.
+  
+Lemma arrow_kind_inv4 : forall Gamma ts,
+                          well_formed_type Gamma (tcon TArrow ts) KStar ->
+                          exists t1 t2, ts = t1 :: t2 :: nil.
+Proof.
+  intros.
+  assert (K : well_formed_types Gamma ts (KStar :: KStar :: nil)).
+  apply tcon_ind with TArrow. simpl. apply arrKind. auto.
+  inversion K. inversion H4. inversion H9. exists t. exists t0.  trivial.
+Qed.
+
+
 
 Lemma eq_kind_inv : forall Gamma k U V T k',
   well_formed_type Gamma (tCoerce k U V T) k' ->
@@ -89,6 +225,62 @@ Proof.
 Qed.
 
 (* ###################################################################### *)
+
+Inductive value_type : ty -> Prop :=
+| v_univ : forall k T,
+             value_type (TUniv k T)
+| v_con  : forall tc ts t,
+             t = tcon tc ts -> value_type t.
+
+
+Inductive consistent_equality : ty -> ty -> Prop :=
+| consistent_univ : forall k T1 T2,
+     consistent_equality (TUniv k T1) (TUniv k T2)
+| consistent_con  : forall tc ts1 ts2,
+     consistent_equality (tcon tc ts1) (tcon tc ts2)
+| consistent_l  : forall U V,
+     ~(value_type V) -> consistent_equality U V
+| consistent_r  : forall U V,
+     ~(value_type U) -> consistent_equality U V.
+
+
+Lemma coercion_consistency : forall c U V,
+   empty |- c ; U ~~ V ->
+                consistent_equality U V.
+Admitted.
+  
+Lemma coercion_consistency_arrow : forall c T U V,   
+   empty |- c; T ~~ tArrow U V -> value_type T -> exists U1 V1, T = tArrow U1 V1.
+Proof.
+  intros c T U V HC HV.
+  pose (K:= coercion_consistency _ _ _ HC). inversion K.
+  - rewrite <- arrow_normalize in H1.
+    destruct (coercion_well_formed _ _ _ _ HC) as [_ [k' [WFU WFV]]].
+    assert (k' = KStar) by apply (arrow_kind_inv3 _ _ _ _ WFV). subst.
+    apply tcon_injective in H1. destruct H1. subst.
+    apply arrow_kind_inv4 in WFU. destruct WFU as [t1 [t2 EQ]]. subst.
+    exists t1. exists t2. unfold tcon. simpl. trivial.
+  - unfold not in H. assert False. apply H. rewrite <- arrow_normalize. econstructor. eauto. contradiction.
+  - contradiction.
+Qed.
+
+Lemma coercion_consistency_eq : forall c k T U V W,
+                                  empty |- c; T ~~ tCoerce k U V W -> value_type T -> exists U1 V1 W1, T = tCoerce k U1 V1 W1.
+Admitted.
+
+Lemma coercion_consistency_univ : forall c T k U,
+                                    empty |- c; T ~~ TUniv k U -> value_type T -> exists T1, T = TUniv k T1.
+intros c T k U H VT.
+apply coercion_consistency in H; subst.
+inversion H. subst.
+- exists T1. trivial.
+- unfold tcon in H2. destruct ts2. simpl in H2. inversion H2.
+  destruct tcon_app with (tc := TCon tc) (t := t) (ts := ts2) as [v [w E]]. rewrite E in H2. inversion H2.
+- assert False. unfold not in H0. apply H0. constructor. contradiction.
+- contradiction.
+Qed.
+
+(* ###################################################################### *)
 (** * Canonical Forms *)
 
 
@@ -121,6 +313,18 @@ Proof.
   exists t0. trivial.
 Qed.
 
+Lemma values_have_value_type : forall v T,
+                                 uncoerced_value v -> (empty |- v \in T) -> value_type T.
+  intros.
+  inversion H.
+  - subst. inversion H0. rewrite <- arrow_normalize. econstructor. eauto.
+  - subst. inversion H0. econstructor.
+  - subst. inversion H0. rewrite <- eq_normalize. econstructor. eauto.
+Qed.
+  
+
+
+(*
 
 Lemma coercion_consistency_ind : forall Gamma c U V,
   (forall n, get_cvar Gamma n = None) ->
@@ -159,6 +363,7 @@ Proof.
   intros. apply coercion_consistency_ind with empty c. trivial. trivial.
 Qed.
 
+*)
 
 (* ###################################################################### *)
 (** * Progress *)
@@ -234,10 +439,10 @@ Proof with eauto.
         destruct H0 as [t0 Heq]. subst.
         exists ([0:=t2]t0)...
       SSCase "t1 is coerced".
-        inversion Ht1; subst. apply coercion_consistency in H3; subst.
-        exists (tcoerce (tapp t (tcoerce t2 (CSym (CNth 2 (CNth 1 c))))) (CNth 2 c)).
-        econstructor...
-
+      inversion Ht1; subst.
+      assert (HV : value_type T1). eapply values_have_value_type. eauto. eauto.
+      destruct (coercion_consistency_arrow _ _ _ _ H3 HV) as [U [V EQ]]. subst.
+      exists (tcoerce (tapp t (tcoerce t2 (CSym (CNth 2 (CNth 1 c))))) (CNth 2 c))...
     SCase "t1 steps".
       inversion H as [t1' Hstp]. exists (tapp t1' t2)...
       
@@ -251,9 +456,11 @@ Proof with eauto.
         destruct H2; subst.
         exists ([0 := T2] x)...
       SSCase "t1 in coerced".
-        inversion Ht; subst. apply coercion_consistency in H5; subst.
-        exists (tcoerce (ttapp t T2) (CTApp c T2))...
-
+      inversion Ht; subst.
+      assert (VT: value_type T1). apply (values_have_value_type _ _ H1 H7).
+      destruct (coercion_consistency_univ _ _ _ _ H5 VT) as [T E]. subst.
+      exists (tcoerce (ttapp t T2) (CTApp c T2))...
+      
     SCase "t1 also steps".
       inversion H1. exists (ttapp x T2)...
 
@@ -268,11 +475,14 @@ Proof with eauto.
       SSCase "t is coerced".
         destruct (typing_well_formed _ _ _ Ht) as [HC _].
         destruct (eq_kind_inv _ _ _ _ _ _ HC) as [K1 [K2 [K3 K4]]].
-        inversion Ht; subst. apply coercion_consistency in H4; subst.
+        inversion Ht; subst.
+        pose (K := values_have_value_type _ _ H0 H6).
+        destruct (coercion_consistency_eq _ _ _ _ _ _ H4) as [V1 [V2 [S E]]]. auto. subst.
         
         exists (tcoerce (tcapp t (CTrans (CTrans (CNth 2 (CNth 1 (CNth 1 c0))) c)
                                         (CSym (CNth 2 (CNth 1 c0)))))
-               (CNth 2 c0))...
+                        (CNth 2 c0))...
+
     SCase "t steps".
       inversion H0. exists (tcapp x c)...
 

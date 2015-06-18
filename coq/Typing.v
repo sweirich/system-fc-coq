@@ -321,4 +321,32 @@ Proof.
 Qed.    
 
 
+(* ####################################################### *)
+(** *** Type constructor multi application                 *)
+
+Fixpoint tcon_aux t ts :=
+  match ts with
+    | nil => t
+    | hd :: tl => tcon_aux (TApp t hd) tl
+  end.
+Definition tcon tc ts := tcon_aux (TCon tc) ts.
+
+Lemma arrow_normalize : forall t1 t2,
+                          tcon TArrow (t1 :: t2 :: nil) =
+                          tArrow t1 t2.
+Proof.
+  intros. unfold tcon. simpl. trivial.
+Qed.
+
+Lemma eq_normalize : forall k t1 t2 t3,
+                       tcon (TEq k) (t1 :: t2 :: t3 :: nil) =
+                       tCoerce k t1 t2 t3.
+Proof.
+  intros. unfold tcon. simpl. trivial.
+Qed.
+
+
+
+
+
 End TYPING.

@@ -35,7 +35,7 @@ Shifting.vo: SystemFC.vo
 Substitution.vo: Shifting.vo
 Typing.vo: Substitution.vo
 Weakening.vo: Typing.vo
-Evaluation.vo: Substitution.vo
+Evaluation.vo: Substitution.vo Typing.vo
 SubstProp.vo: Typing.vo Evaluation.vo Weakening.vo
 SystemFCProp.vo: SubstProp.vo
 
