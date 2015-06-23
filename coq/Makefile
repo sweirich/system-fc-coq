@@ -37,7 +37,8 @@ Typing.vo: Substitution.vo
 Weakening.vo: Typing.vo
 Evaluation.vo: Substitution.vo Typing.vo
 SubstProp.vo: Typing.vo Evaluation.vo Weakening.vo
-SystemFCProp.vo: SubstProp.vo
+Consistency.vo: Typing.vo SubstProp.vo 
+SystemFCProp.vo: Consistency.vo
 
 
 %.vo %.glob: %.v 
