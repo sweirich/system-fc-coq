@@ -17,6 +17,7 @@ Notation "'[' x ':=' s ']' t" := (do_subst x s t) (at level 20).
 
 Fixpoint subst_coer_fix (x:nat) (d:cn) (c:cn) : cn :=
   match c with
+    | CAxiom ks t u => CAxiom ks t u
     | CVar y => 
       if eq_nat_dec x y then d
       else if le_lt_dec x y then CVar (y-1)
@@ -46,6 +47,8 @@ Inductive subst_coercion : cn -> nat -> cn -> cn -> Prop :=
   | sc_var_gt : forall d x x',
       x > x' ->
       subst_coercion d x (CVar x') (CVar x')
+  | sc_axiom : forall d x ks t u,
+      subst_coercion d x (CAxiom ks t u) (CAxiom ks t u)
   | sc_refl : forall d x T,
       subst_coercion d x (CRefl T) (CRefl T)
   | sc_sym : forall d x c c',
@@ -223,9 +226,6 @@ Fixpoint subst_type_in_type_fix (I:nat) (P:ty) (T:ty) : ty :=
   | TApp T1 T2 =>
       TApp (subst_type_in_type_fix I P T1) (subst_type_in_type_fix I P T2)
   | TUniv k T   => TUniv k (subst_type_in_type_fix (I + 1) (tshift 0 P) T)
-(*  | TCoerce T1 T2 U =>
-    TCoerce (subst_type_in_type_fix I P T1) (subst_type_in_type_fix I P T2)
-            (subst_type_in_type_fix I P U) *)
   end.
 
 Instance subst_ty_ty : Subst nat ty ty := {
@@ -250,13 +250,8 @@ Inductive subst_type_in_type (T:ty) (I:nat) : ty -> ty -> Prop :=
       subst_type_in_type T I (TApp T1 T2) (TApp T1' T2')
   | s_univ : forall T1 T2 k,
       subst_type_in_type (tshift 0 T) (I+1) T1 T2 ->
-      subst_type_in_type T I (TUniv k T1) (TUniv k T2)
-(*  | s_coerce : forall U U1 U2 V V1 V2,
-      subst_type_in_type T I U1 V1 ->
-      subst_type_in_type T I U2 V2 ->
-      subst_type_in_type T I U  V  ->
-      subst_type_in_type T I (TCoerce U1 U2 U) (TCoerce V1 V2 V) *)
-      .
+      subst_type_in_type T I (TUniv k T1) (TUniv k T2).
+
 
 Lemma subst_type_in_type_correct : forall N P T1 T2,
   [N:=P]T1 = T2 <-> subst_type_in_type P N T1 T2.
@@ -309,17 +304,16 @@ Qed.
 
 Fixpoint subst_ty_in_cn_fix (X:nat) (U:ty) (c:cn) : cn :=
   match c with
-    | CVar y       => CVar y
+    | CAxiom ks T T' =>
+      CAxiom ks (subst_type_in_type_fix (length ks + X) (tshift 0 U) T)
+                (subst_type_in_type_fix (length ks + X) (tshift 0 U) T')
+    | CVar y       => CVar y                           
     | CRefl T      => CRefl ([X := U] T)
     | CSym c       => CSym (subst_ty_in_cn_fix X U c)
     | CTrans c1 c2 => CTrans (subst_ty_in_cn_fix X U c1)
                              (subst_ty_in_cn_fix X U c2)
     | CApp c1 c2 => CApp (subst_ty_in_cn_fix X U c1)
       (subst_ty_in_cn_fix X U c2)
-(*      
-    | CTCoerce c1 c2 c3 => CTCoerce (subst_ty_in_cn_fix X U c1)
-                                    (subst_ty_in_cn_fix X U c2)
-                                    (subst_ty_in_cn_fix X U c3) *)
     | CNth n c     => CNth n (subst_ty_in_cn_fix X U c)
     | CTAbs k c      => CTAbs k (subst_ty_in_cn_fix (S X) (tshift 0 U) c)
     | CTApp c T    => CTApp (subst_ty_in_cn_fix X U c) ([X := U] T)
@@ -331,7 +325,11 @@ Instance subst_ty_cn : Subst nat ty cn := {
 
 Inductive subst_ty_in_cn (T:ty) (X:nat) : cn -> cn -> Prop :=
   | stc_var : forall x,
-      subst_ty_in_cn T X (CVar x) (CVar x)
+                subst_ty_in_cn T X (CVar x) (CVar x)
+  | stc_axiom : forall ks t u t' u',
+      subst_type_in_type (tshift 0 T) (length ks + X) t t' ->
+      subst_type_in_type (tshift 0 T) (length ks + X) u u' ->
+      subst_ty_in_cn T X (CAxiom ks t u) (CAxiom ks t' u')
   | stc_refl : forall U U',
       subst_type_in_type T X U U' ->
       subst_ty_in_cn T X (CRefl U) (CRefl U')
@@ -373,6 +371,7 @@ Proof.
       try (apply IHc2; trivial);
       try (apply IHc3; trivial);
       try (apply subst_type_in_type_correct; trivial).
+    simpl.
   Case "<-".
     intro H. induction H; simpl;
     subst; try reflexivity; try assumption;

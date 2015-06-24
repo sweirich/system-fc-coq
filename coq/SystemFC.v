@@ -31,6 +31,7 @@ Inductive ty : Type :=
 (** *** Coercions *)
 
 Inductive cn : Type :=
+  | CAxiom   : list kind -> ty -> ty -> cn
   | CVar     : nat -> cn
   | CRefl    : ty -> cn
   | CSym     : cn -> cn
@@ -42,7 +43,8 @@ Inductive cn : Type :=
 
 Tactic Notation "c_cases" tactic(first) ident(c) :=
   first;
-  [ Case_aux c "CVar"   | Case_aux c "CRefl"
+  [ Case_aux c "CAxiom" 
+  | Case_aux c "CVar"   | Case_aux c "CRefl"
   | Case_aux c "CSym"   | Case_aux c "CTrans"
   | Case_aux c "CApp"  (* | Case_aux c "CTCoerce" *)
   | Case_aux c "CNth"

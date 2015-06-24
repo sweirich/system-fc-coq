@@ -31,10 +31,10 @@ Inductive consistent_equality : ty -> ty -> Prop :=
      ~(value_type U) -> consistent_equality U V.
 
 (* We ASSUME that the context is consistent. *)
-Parameter coercion_consistency : forall c U V,
+Lemma coercion_consistency : forall c U V,
    empty |- c ; U ~~ V ->
    consistent_equality U V.
-
+Admitted.
 
 (* ############################################################### *)
 
