@@ -1,12 +1,8 @@
-Require Export Shifting.
+Require Export SFC.Shifting.
 Require Import Omega.
 
 (* ###################################################################### *)
 (** *** Substitution *)
-
-Module SUBSTITUTION.
-Import SYSTEMFC.
-Import SHIFTING.
 
 
 Class Subst (X S T : Type) := {
@@ -682,13 +678,17 @@ Qed.
         end). omega. 
      destruct (le_gt_dec (S (n'' + Y)) n). omega.
      destruct n. trivial. simpl. unfold sumbool_rec. unfold sumbool_rect.
-     destruct (le_lt_dec (n'' + Y) n). omega. 
-     destruct (Nat.eq_dec (n'' + Y) n). omega. trivial.
-     apply f_equal. 
+     destruct (le_lt_dec (n'' + Y) n). omega.
+     trivial.
+     (*
+     destruct (Arith.EqNat.Beq_nat (n'' + Y) n). omega. trivial.
+     apply f_equal.
+     *)
      assert (n'' + Y + 1 = S n'' + Y) by omega. rewrite H.
      assert (tshift 0 (tshift (0 + n'') U) = tshift (1 + 0 + n'') (tshift 0 U))
        by (apply tshift_tshift_prop).
-     simpl in H0. rewrite H0. 
+     simpl in H0. 
+     rewrite H0. 
      rewrite IHT. trivial. 
  Qed.
 
@@ -757,6 +757,3 @@ Qed.
    trivial.
 Qed.
 
-
-
-End SUBSTITUTION.

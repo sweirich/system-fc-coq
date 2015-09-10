@@ -1,11 +1,7 @@
-Require Export Substitution.
-Require Export Typing.
-
-Module EVALUATION.
-Import SYSTEMFC.
-Import SHIFTING.
-Import SUBSTITUTION.
-Import TYPING.
+Require Export SFC.Substitution.
+Require Export SFC.Typing.
+Require Import SFC.SystemFC.
+Require Import SFC.Shifting.
 
 (* ################################### *)
 (** *** Reduction *)
@@ -74,4 +70,3 @@ Hint Constructors step.
 Notation multistep := (multi step).
 Notation "t1 '==>*' t2" := (multistep t1 t2) (at level 40).
 
-End EVALUATION.
