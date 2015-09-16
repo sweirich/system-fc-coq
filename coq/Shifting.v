@@ -1,9 +1,7 @@
 (** * Shifting in System FC *)
 Require Import Omega.
-Require Export SystemFC.
+Require Export SFC.SystemFC.
 
-Module SHIFTING.
-Import SYSTEMFC.
 
 (* ################################### *)
 (** *** Types *)
@@ -120,4 +118,3 @@ Instance shift_typ_tm : ShiftTyp tm := {
    shift_typ := tshift_typ
 }.                                                      
 
-End SHIFTING.

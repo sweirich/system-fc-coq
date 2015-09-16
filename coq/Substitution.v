@@ -1,12 +1,8 @@
-Require Export Shifting.
+Require Export SFC.Shifting.
 Require Import Omega.
 
 (* ###################################################################### *)
 (** *** Substitution *)
-
-Module SUBSTITUTION.
-Import SYSTEMFC.
-Import SHIFTING.
 
 
 Class Subst (X S T : Type) := {
@@ -682,13 +678,20 @@ Qed.
         end). omega. 
      destruct (le_gt_dec (S (n'' + Y)) n). omega.
      destruct n. trivial. simpl. unfold sumbool_rec. unfold sumbool_rect.
-     destruct (le_lt_dec (n'' + Y) n). omega. 
-     destruct (Nat.eq_dec (n'' + Y) n). omega. trivial.
-     apply f_equal. 
-     assert (n'' + Y + 1 = S n'' + Y) by omega. rewrite H.
+     destruct (le_lt_dec (n'' + Y) n). omega.
+     trivial.
+     (*
+     destruct (Arith.EqNat.Beq_nat (n'' + Y) n). omega. trivial.
+     apply f_equal.
+     *)
+     assert (n'' + Y <> n) by omega.
+     (* I can't find the proper lemma, so the following proof is a quick, dirty fix *)
+     remember (Nat.eq_dec (n'' + Y) n) as peq.
+     destruct peq ; [contradiction | trivial].
      assert (tshift 0 (tshift (0 + n'') U) = tshift (1 + 0 + n'') (tshift 0 U))
-       by (apply tshift_tshift_prop).
-     simpl in H0. rewrite H0. 
+       as H by (apply tshift_tshift_prop) ;
+     simpl in H ; rewrite H ; clear H.
+     assert (n'' + Y + 1 = (S n'') + Y) as _H by omega ; rewrite _H ; clear _H.
      rewrite IHT. trivial. 
  Qed.
 
@@ -757,6 +760,3 @@ Qed.
    trivial.
 Qed.
 
-
-
-End SUBSTITUTION.

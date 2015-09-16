@@ -39,13 +39,13 @@ Tactic Notation "Case_aux" ident(x) constr(name) :=
   | assert_eq x name; move_to_top x
   | fail 1 "because we are working on a different case" ].
 
-Tactic Notation "Case" constr(name) := Case_aux Case name.
-Tactic Notation "SCase" constr(name) := Case_aux SCase name.
-Tactic Notation "SSCase" constr(name) := Case_aux SSCase name.
-Tactic Notation "SSSCase" constr(name) := Case_aux SSSCase name.
-Tactic Notation "SSSSCase" constr(name) := Case_aux SSSSCase name.
-Tactic Notation "SSSSSCase" constr(name) := Case_aux SSSSSCase name.
-Tactic Notation "SSSSSSCase" constr(name) := Case_aux SSSSSSCase name.
+Tactic Notation "Case"        constr(name) := Case_aux Case        name.
+Tactic Notation "SCase"       constr(name) := Case_aux SCase       name.
+Tactic Notation "SSCase"      constr(name) := Case_aux SSCase      name.
+Tactic Notation "SSSCase"     constr(name) := Case_aux SSSCase     name.
+Tactic Notation "SSSSCase"    constr(name) := Case_aux SSSSCase    name.
+Tactic Notation "SSSSSCase"   constr(name) := Case_aux SSSSSCase   name.
+Tactic Notation "SSSSSSCase"  constr(name) := Case_aux SSSSSSCase  name.
 Tactic Notation "SSSSSSSCase" constr(name) := Case_aux SSSSSSSCase name.
 
 Fixpoint ble_nat (n m : nat) : bool :=

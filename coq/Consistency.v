@@ -1,15 +1,13 @@
-Require Import Weakening.
-Require Export SubstProp.
-Require Export Evaluation.
+Require Import SFC.Weakening.
+Require Export SFC.SubstProp.
+Require Export SFC.Evaluation.
+Require Import SFC.SystemFC.
+Require Import SFC.Shifting.
+Require Import SFC.Substitution.
+Require Import SFC.Typing.
+Require Import SFC.Utils.
+Require Import Coq.Program.Equality.
 
-Module CONSISTENCY.
-Import SYSTEMFC.
-Import SHIFTING.
-Import SUBSTITUTION.
-Import TYPING.
-Import EVALUATION.
-Import WEAKENING.
-Import SUBSTPROP.
 
 (* ############################################################### *)
 
@@ -18,6 +16,8 @@ Inductive value_type : ty -> Prop :=
              value_type (TUniv k T)
 | v_con  : forall tc ts t,
              t = tcon tc ts -> value_type t.
+
+Hint Constructors value_type.
 
 
 Inductive consistent_equality : ty -> ty -> Prop :=
@@ -34,6 +34,8 @@ Inductive consistent_equality : ty -> ty -> Prop :=
 Lemma coercion_consistency : forall c U V,
    empty |- c ; U ~~ V ->
    consistent_equality U V.
+Proof.
+  safe_admit.
 Admitted.
 
 (* ############################################################### *)
@@ -59,7 +61,9 @@ Fixpoint is_result (k : kind) (k2 : kind) : Prop :=
 Lemma result_kind_antireflexive : forall k, ~(result_kind k k).
   unfold not. intro. induction k. intros. inversion H.
   intros.
-Admitted.
+Proof.
+  safe_admit.
+Qed.
  *)
 
 Lemma kinds_oc : forall k k0, ~(k = KArrow k0 k).
@@ -71,6 +75,8 @@ Qed.
 Lemma arg_kinds_oc : forall ks k1 k, k = KArrow k1 (arg_kinds ks k) -> False.
   induction k. intros. inversion H.
   intro H1. inversion H1.
+Proof.
+  safe_admit.
 Admitted.
 (*
   destruct ks. simpl in H. inversion H. simpl in H.
@@ -115,6 +121,5 @@ Lemma tcon_injective :
   forall ts1 ts2 tc1 tc2,
     tcon tc1 ts1 = tcon tc2 ts2 -> tc1 = tc2 /\ ts1 = ts2.
 Proof.
+  safe_admit.
 Admitted.
-
-End CONSISTENCY.

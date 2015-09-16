@@ -1,4 +1,7 @@
 *.glob
 *.vo
+*.v.d
 \#*
 .#*
+Makefile
+_CoqProject

@@ -1,16 +1,12 @@
 Require Import Omega.
 
-Require Export Typing.
+Require Export SFC.Typing.
+Require Import SFC.Weakening.
+Require Import SFC.SystemFC.
+Require Import SFC.Shifting.
+Require Import SFC.Substitution.
 Require Export Coq.Logic.Decidable.
-Require Import Weakening.
 
-
-Module SUBSTPROP.
-Import SYSTEMFC.
-Import SHIFTING.
-Import SUBSTITUTION.
-Import TYPING.
-Import WEAKENING.
 
 (* ####################################################### *)  
 (* ** Substitution for type variables.                     *)
@@ -700,14 +696,3 @@ Proof with auto.
     econstructor. eapply coercion_remove_var.
     eassumption. eapply IHt. trivial. eassumption. trivial.
 Qed.
-
-
-
-(* ---------------------------------------------------- *)
-
-
-
-
-
-
-End SUBSTPROP.

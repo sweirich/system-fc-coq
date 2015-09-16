@@ -1,14 +1,11 @@
 Require Import Omega.
 
-Require Export Typing.
-Require Export Coq.Logic.Decidable.
+Require Export SFC.Typing.
+Require Import SFC.SystemFC.
+Require Import SFC.Shifting.
+Require Import SFC.Substitution.
+Require Export Logic.Decidable.
 
-Module WEAKENING.
-
-Import SYSTEMFC.
-Import SHIFTING.
-Import SUBSTITUTION.
-Import TYPING.
 
 (** This module contains various properties related to 
     Weakening and Strengthening for the type system. 
@@ -939,4 +936,3 @@ Qed.
 (** ** Context manipulation with all variables.            *)
 (* ####################################################### *)
 
-End WEAKENING.

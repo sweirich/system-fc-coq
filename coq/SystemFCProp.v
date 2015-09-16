@@ -1,19 +1,14 @@
 (** * SystemFCProp: Properties of System FC *)
 
-Require Import Weakening.
-Require Export SubstProp.
-Require Export Evaluation.
-Require Import Consistency.
-
-Module SYSTEMFCPROP.
-Import SYSTEMFC.
-Import SHIFTING.
-Import SUBSTITUTION.
-Import TYPING.
-Import EVALUATION.
-Import WEAKENING.
-Import SUBSTPROP.
-Import CONSISTENCY.
+Require Import SFC.Weakening.
+Require Export SFC.SubstProp.
+Require Export SFC.Evaluation.
+Require Import SFC.Consistency.
+Require Import SFC.SystemFC.
+Require Import SFC.Shifting.
+Require Import SFC.Substitution.
+Require Import SFC.Typing.
+Require Import SFC.SubstProp.
 
 
 (* #########################################################  *)
@@ -809,5 +804,3 @@ Proof.
     apply IHHmulti. eapply preservation. apply Hhas_type.
     assumption. assumption. assumption.
 Qed.
-
-End SYSTEMFCPROP.

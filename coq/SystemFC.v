@@ -1,12 +1,10 @@
 
 (** * System FC **)
-Require Export SfLib.
+Require Export SFC.SfLib.
 
 
 (* ###################################################################### *)
-(** ** Syntax *)
-
-Module SYSTEMFC.
+(** ** System FC syntax *)
 
 (* ################################### *)
 (** *** Types *)
@@ -31,7 +29,7 @@ Inductive ty : Type :=
 (** *** Coercions *)
 
 Inductive cn : Type :=
-  | CAxiom   : list kind -> ty -> ty -> cn
+  | CAxiom   : list kind -> ty -> ty -> cn (* TODO *)
   | CVar     : nat -> cn
   | CRefl    : ty -> cn
   | CSym     : cn -> cn
@@ -94,6 +92,3 @@ Inductive value : tm -> Prop :=
       value (tcoerce t c).
 
 Hint Constructors value.
-
-
-End SYSTEMFC.

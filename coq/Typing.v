@@ -1,11 +1,6 @@
-Require Import SystemFC.
-Require Export Shifting.
-Require Export Substitution.
-
-Module TYPING.
-Import SYSTEMFC.
-Import SHIFTING.
-Import SUBSTITUTION.
+Require Import SFC.SystemFC.
+Require Export SFC.Shifting.
+Require Export SFC.Substitution.
 
 (* ###################################################################### *)
 (** ** Typing *)
@@ -349,4 +344,3 @@ Qed.
 
 
 
-End TYPING.
