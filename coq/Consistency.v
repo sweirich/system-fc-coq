@@ -36,7 +36,7 @@ Lemma coercion_consistency : forall c U V,
    consistent_equality U V.
 Proof.
   safe_admit.
-Qed.
+Admitted.
 
 (* ############################################################### *)
 
@@ -77,7 +77,7 @@ Lemma arg_kinds_oc : forall ks k1 k, k = KArrow k1 (arg_kinds ks k) -> False.
   intro H1. inversion H1.
 Proof.
   safe_admit.
-Qed.
+Admitted.
 (*
   destruct ks. simpl in H. inversion H. simpl in H.
 
@@ -122,4 +122,4 @@ Lemma tcon_injective :
     tcon tc1 ts1 = tcon tc2 ts2 -> tc1 = tc2 /\ ts1 = ts2.
 Proof.
   safe_admit.
-Qed.
+Admitted.

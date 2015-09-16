@@ -6,6 +6,7 @@ Require Import SFC.Shifting.
 Require Import SFC.Substitution.
 Require Export Logic.Decidable.
 
+
 (** This module contains various properties related to 
     Weakening and Strengthening for the type system. 
 
